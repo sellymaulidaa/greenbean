@@ -313,16 +313,13 @@ def lihat_produk_toko(df, toko_terpilih):
 
     if toko_produk.empty:
         print("Toko ini belum memiliki produk.")
-        return []
+        return pd.DataFrame()
 
-    # Buat list data untuk tabel
     data_list = [
         [i+1, row["Nama Toko"], row["Produk"], row["Stok"], f"Rp{row['Harga Lokal']}", f"Rp{row['Harga Ekspor']}"]
         for i, (_, row) in enumerate(toko_produk.iterrows())
     ]
 
-    # Cetak tabel
-    from tabulate import tabulate
     print(tabulate(data_list,
                    headers=["No", "Nama Toko", "Produk", "Stok", "Harga Lokal", "Harga Ekspor"],
                    tablefmt="fancy_grid",
@@ -636,12 +633,13 @@ def menu_pembeli(username):
         if pilihan == "1":
             toko_terpilih = pilih_toko(df)
             os.system('cls')
+            toko_produk = lihat_produk_toko(df, toko_terpilih) 
+            if not toko_produk.empty:
+                input("\nTekan ENTER untuk kembali ke menu pembeli")
             
-            input("\nTekan Enter untuk kembali...")
         elif pilihan == "2":
             toko_terpilih = pilih_toko(df)
             os.system('cls')
-
             toko_produk = lihat_produk_toko(df, toko_terpilih)
             
             total_harga, total_berat, daftar_pesanan = beliproduk(df, username, toko_terpilih)
@@ -669,3 +667,4 @@ def menu_pembeli(username):
                 input("\nTekan ENTER untuk kembali...")
 
 menu_utama()
+
