@@ -233,7 +233,7 @@ def buat_permintaan(username, nama_toko):
         "Jumlah (kg)": jumlah,
         "Keterangan": keterangan if keterangan != "" else "Tidak ada",
         "Tanggal Permintaan": tanggal,
-        "Toko": nama_toko   # ← WAJIB!
+        "Toko": nama_toko   
     }
 
     df = pd.concat([df, pd.DataFrame([permintaan_baru])], ignore_index=True)
@@ -676,3 +676,4 @@ def menu_pembeli(username):
                 input("\nTekan ENTER untuk kembali...")
 
 menu_utama()
+
