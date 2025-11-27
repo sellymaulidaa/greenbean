@@ -241,9 +241,6 @@ def buat_permintaan(username, nama_toko):
 
     print("Permintaan berhasil dicatat!")
 
-
-
-
 def lihatPermintaan_Pembeli(username_penjual):
     try:
         df = pd.read_csv('permintaanPembeli.csv')
@@ -329,87 +326,101 @@ def lihat_produk_toko(df, toko_terpilih):
 
 
 
-def beliproduk(produk_df, username,  toko_terpilih):
+def beliproduk(produk_df, username, toko_terpilih):
     total_belanja = 0
     total_berat = 0
     daftar_pesanan = []
     toko_produk = produk_df[produk_df["Nama Toko"] == toko_terpilih]
 
-    try:
-        pilih_produk = int(input("Pilih nomor produk: ")) - 1
-        row = toko_produk.iloc[pilih_produk]
+    while True: 
+        data_list = [
+        [i+1, row["Nama Toko"], row["Produk"], row["Stok"], f"Rp{row['Harga Lokal']}", f"Rp{row['Harga Ekspor']}"]
+        for i, (_, row) in enumerate(toko_produk.iterrows())
+    ]
+
+        print(tabulate(data_list,
+                    headers=["No", "Nama Toko", "Produk", "Stok", "Harga Lokal", "Harga Ekspor"],
+                    tablefmt="fancy_grid",
+                    showindex=False))
+        try:
+            pilih_produk = int(input("Pilih nomor produk: ")) - 1
+            row = toko_produk.iloc[pilih_produk]
+        except:
+            print("Produk tidak valid!")
+            continue 
+
+        produk = row["Produk"]
+        stok_tersedia = row["Stok"]
+
+        print("\n=== PILIH JENIS HARGA ===")
+        print("1. Lokal")
+        print("2. Ekspor")
+        jenis = input("Pilih (1/2): ")
+
+        if jenis == "1":
+            harga_kg = row["Harga Lokal"]
+            jenis_harga = "Lokal"
+        elif jenis == "2":
+            harga_kg = row["Harga Ekspor"]
+            jenis_harga = "Ekspor"
+        else:
+            print("Input tidak valid!")
+            continue
+
+        try:
+            berat = float(input(f"Masukkan berat (kg) untuk {produk}: "))
+        except ValueError:
+            print("Berat harus angka!")
+            continue
+
+        if berat > stok_tersedia:
+            print(f"Stok {produk} hanya tersisa {stok_tersedia} kg.")
+            opsi = input("Apakah ingin membuat permintaan untuk sisanya? (y/n): ").lower()
+            if opsi == 'y':
+                sisa = berat - stok_tersedia
+                print(f"Membuat permintaan untuk {sisa} kg {produk}...")
+                buat_permintaan(username, toko_terpilih)
+                berat = stok_tersedia
+            else:
+                print("Silakan pilih jumlah lain.")
+                continue
+
+        total_item = harga_kg * berat
+        total_belanja += total_item
+        total_berat += berat
+
+        df = pd.read_csv("dataEdamame.csv")
+        index_produk = df[(df["Nama Toko"] == toko_terpilih) & (df["Produk"] == produk)].index[0]
+        df.loc[index_produk, "Stok"] -= berat
+        df.to_csv("dataEdamame.csv", index=False)
+
+        daftar_pesanan.append({
+            "produk": produk,
+            "jenis": jenis_harga,
+            "berat": berat,
+            "harga_per_kg": harga_kg,
+            "harga_total": total_item,
+            "toko": toko_terpilih
+        })
+
+        print(f"\n{produk} {berat} kg ({jenis_harga}) ditambahkan. Total: Rp{total_item:,}")
+
         
-    except:
-        print("Produk tidak valid!")
-        return total_belanja, total_berat, daftar_pesanan
+        lagi = input("\nIngin membeli barang lagi? (y/n): ").lower()
+        if lagi == 'n':
+            break 
+        os.system('cls')
+   
+    print("\n=== TOTAL BELANJA ===")
+    for item in daftar_pesanan:
+        print(f"- {item['produk']} ({item['jenis']}) {item['berat']} kg : Rp{item['harga_total']:,}")
 
-    produk = row["Produk"]
-    stok_tersedia = row["Stok"]
-
-    print("\n=== PILIH JENIS HARGA ===")
-    print("1. Lokal")
-    print("2. Ekspor")
-    jenis = input("Pilih (1/2): ")
-
-    if jenis == "1":
-        harga_kg = row["Harga Lokal"]
-        jenis_harga = "Lokal"
-    elif jenis == "2":
-        harga_kg = row["Harga Ekspor"]
-        jenis_harga = "Ekspor"
-    else:
-        print("Input tidak valid!")
-        return total_belanja, total_berat, daftar_pesanan
-
-    try:
-        berat = float(input(f"Masukkan berat (kg) untuk {produk}: "))
-    except ValueError:
-        print("Berat harus angka!")
-        return total_belanja, total_berat, daftar_pesanan
-
-    if berat > stok_tersedia:
-            print(f"\n Stok {produk} hanya tersisa {stok_tersedia} kg.")
-            if berat > stok_tersedia:
-                print(f"\n Stok {produk} hanya tersisa {stok_tersedia} kg.")
-                while True:
-                    opsi = input("Apakah ingin membuat permintaan untuk sisanya? (y/n): ").lower()
-                    if opsi == 'y':
-                        sisa = berat - stok_tersedia
-                        print(f"Membuat permintaan untuk {sisa} kg {produk}...")
-                        buat_permintaan(username, toko_terpilih)
-                        berat = stok_tersedia  
-                        break
-                    elif opsi == 'n':
-                        print("Batal membeli lebih dari stok, silakan pilih jumlah lain.")
-                        break
-                    else:
-                        print("Input salah, ketik y atau n.")
-                    if opsi == 'n':
-                        continue 
-
-    total_item = harga_kg * berat
-    total_belanja += total_item
-    total_berat += berat
-
-    df = pd.read_csv("dataEdamame.csv")
-    index_produk = df[(df["Nama Toko"] == toko_terpilih) & (df["Produk"] == produk)].index[0]
-    df.loc[index_produk, "Stok"] -= berat
-    df.to_csv("dataEdamame.csv", index=False)
-
-    daftar_pesanan.append({
-        "produk": produk,
-        "jenis": jenis_harga,
-        "berat": berat,
-        "harga_per_kg": harga_kg,
-        "harga_total": total_item,
-        "toko": toko_terpilih
-    })
-
-    print(f"\n✓ {produk} {berat} kg ({jenis_harga}) ditambahkan. Total: Rp{total_item:,}")
-    print(f"TOTAL BELANJA: Rp{total_belanja:,}")
+    print(f"\nTOTAL KESELURUHAN: Rp{total_belanja:,}")
 
     return total_belanja, total_berat, daftar_pesanan
 
+
+   
 
 def hitung_ongkir(berat_paket):   
     
@@ -635,13 +646,11 @@ def menu_pembeli(username):
             os.system('cls')
             toko_produk = lihat_produk_toko(df, toko_terpilih) 
             if not toko_produk.empty:
-                input("\nTekan ENTER untuk kembali ke menu pembeli")
+                input("\nTekan ENTER untuk kembali ke menu pembeli...")
             
         elif pilihan == "2":
             toko_terpilih = pilih_toko(df)
             os.system('cls')
-            toko_produk = lihat_produk_toko(df, toko_terpilih)
-            
             total_harga, total_berat, daftar_pesanan = beliproduk(df, username, toko_terpilih)
 
             if daftar_pesanan:
@@ -649,15 +658,15 @@ def menu_pembeli(username):
                 if total_berat > 0:
                     ongkir_data = hitung_ongkir(total_berat)
                     total_akhir = total_harga + ongkir_data[0]
-
                     pembayaran = metode_pembayaran()
-
-                    simpan_riwayatPenjualan(daftar_pesanan, total_harga, username, daftar_pesanan[0]["toko"], pembayaran)
+                    simpan_riwayatPenjualan(daftar_pesanan,total_harga,username,daftar_pesanan[0]["toko"],pembayaran)
 
                     os.system('cls')
+                    
                     tampilkan_struk(daftar_pesanan,ongkir_data[0],total_akhir,ongkir_data,total_berat,pembayaran)
 
             input("\nTekan Enter untuk kembali...")
+
 
         elif pilihan == "3":
                 minta_ulasan()
@@ -667,4 +676,3 @@ def menu_pembeli(username):
                 input("\nTekan ENTER untuk kembali...")
 
 menu_utama()
-
