@@ -91,7 +91,8 @@ def tambahProduk(username):
         df = pd.read_csv("dataEdamame.csv")
     except FileNotFoundError:
         df = pd.DataFrame(columns=["Nama Toko","Produk","Stok","Harga Lokal","Harga Ekspor"])
-    df_new = pd.DataFrame({"Nama Toko":[username],"Produk":[produk],"Stok":[stok],"Harga Lokal":[hargaLokal],"Harga Ekspor":[hargaEkspor]})
+    df_new = pd.DataFrame({"Nama Toko":[username],"Produk":[produk],"Stok":[stok],"Harga Lokal":[hargaLokal],
+                           "Harga Ekspor":[hargaEkspor]})
     df = pd.concat([df, df_new], ignore_index=True)
     df.to_csv("dataEdamame.csv", index=False)
     print("Produk berhasil ditambahkan!\n")
@@ -408,67 +409,49 @@ def updateStatus(username):
 
 def lihatStatus_Pembeli(username):
     print("\n=== LIHAT STATUS PENJUALAN & PERMINTAAN ===")
-    print("1. Lihat Status Penjualan")
+    print("1. Lihat Status Pengiriman")
     print("2. Lihat Status Permintaan Produk")
     pilih = input("Pilih menu (1/2): ")
-
     if pilih == "1":
         try:
             df = pd.read_csv("riwayatpenjualan.csv")
         except FileNotFoundError:
             print("Belum ada data penjualan.")
             return
-
         data = df[df["Pembeli"] == username]
-
         if data.empty:
             print("Tidak ada transaksi penjualan.")
             return
-
         data_list = []
         for _, row in data.iterrows():
-            data_list.append([row["Toko"],row["Produk"],row["Jenis"],row["Berat"],f"Rp{row['Total Bayar']:,}",row["Waktu"], row["Status Penjualan"]])
-
+            data_list.append([row["Toko"],row["Produk"],row["Jenis"],row["Berat"],f"Rp{row['Total Bayar']:,}",row["Waktu"],
+                               row["Status Penjualan"]])
         print("\n=== STATUS PENJUALAN ANDA ===")
         print(tabulate(data_list, 
                        headers=["Toko", "Produk", "Jenis", "Berat", "Total Bayar", "Waktu",  "Status"],
                        tablefmt="fancy_grid"))
         return
-
+    
     elif pilih == "2":
         try:
             df = pd.read_csv("permintaanPembeli.csv")
         except FileNotFoundError:
             print("Belum ada data permintaan.")
             return
-
         data = df[df["Pembeli"] == username]
-
         if data.empty:
             print("Tidak ada permintaan produk.")
             return
-
         data_list = []
         for _, row in data.iterrows():
-            data_list.append([
-                row["Toko"],
-                row["Produk"],
-                row["Jumlah (kg)"],
-                row["Tanggal Permintaan"],
-                row["Status Permintaan"]
-            ])
-
+            data_list.append([ row["Toko"], row["Produk"],row["Jumlah (kg)"],row["Tanggal Permintaan"],row["Status Permintaan"]])
         print("\n=== STATUS PERMINTAAN PRODUK ===")
         print(tabulate(data_list,
                        headers=["Toko", "Produk", "Jumlah (kg)", "Tanggal", "Status"],
                        tablefmt="fancy_grid"))
         return
-
     else:
         print("Pilihan tidak valid!")
-
-
-
 
 
 
@@ -495,7 +478,8 @@ def tampilan_produk(produk_df, toko):
     print(f"\n=== Produk di Toko{toko.capitalize()}===")
     toko_produk = produk_df[produk_df["Nama Toko"].str.lower()==toko.lower()]
     if not toko_produk.empty:
-        produk_list = [[row["No"], row["Produk"], row["Stok"], f"Rp{row['Harga Lokal']}", f"Rp{row['Harga Ekspor']}"]for _, row in toko_produk.iterrows()]
+        produk_list = [[row["No"], row["Produk"], row["Stok"], f"Rp{row['Harga Lokal']}", f"Rp{row['Harga Ekspor']}"]
+                       for _, row in toko_produk.iterrows()]
 
         print(tabulate(produk_list, headers=["No", "Produk", "Stok", "Harga Lokal", "Harga Ekspor"], tablefmt="fancy_grid"))
     else:
@@ -675,33 +659,27 @@ def metode_pembayaran():
 
 
 def tampilkan_struk(data_pesanan, ongkir, total_akhir, info_kirim, total_berat_paket, metode_pembayaran):
-    
     waktu_transaksi = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     biaya_ongkir, harga_kg_ongkir, tujuan_kirim, zona_kirim = info_kirim
     total_produk = 0               
-    
     print("\n" + "="*50)
     print("           ✨ STRUK PEMBAYARAN GREENBEAN ✨")
     print("="*50)
     print(f"Waktu Transaksi: {waktu_transaksi}")
     print(f"Metode Bayar    : {metode_pembayaran}")
     print("-" * 50)
-    
     print("RINCIAN PESANAN:")
     total_produk = 0
     for item in data_pesanan:
         harga_satuan = item['harga_per_kg']
         harga_total = item['harga_total']
-
         print(f"  > {item['produk']} ({item['jenis']})")
         print(f"    {item['berat']:.2f} Kg x Rp {harga_satuan:.2f} = Rp {harga_total:.2f}")
         total_produk += item['harga_total'] 
     print("-" * 50)
-    
     print("RINCIAN PENGIRIMAN:")
     print(f"  Tujuan: {tujuan_kirim} ({zona_kirim})")
     print(f"  Total Berat: {total_berat_paket:.2f} Kg")
-    
     print("\nTOTAL HARGA:")
     print(f"  Total Belanja Produk : Rp {total_produk:.2f}")
     print(f"  Biaya Kirim ({harga_kg_ongkir:.2f}/Kg) : Rp {biaya_ongkir:.2f}")
@@ -837,9 +815,9 @@ def menu_pembeli(username):
         print("\n=== MENU PEMBELI ===")
         print("1. Lihat Produk")
         print("2. Beli Produk")
-        print("3. Lihat Status Penjualan & Permintaan")
+        print("3. Lihat Status Pengiriman & Permintaan")
         print("4. Selesai")        
-        pilihan = input("Pilih opsi (1-3): ")
+        pilihan = input("Pilih opsi (1-4): ")
         df = pd.read_csv("dataEdamame.csv")
         if pilihan == "1":
             toko_terpilih = pilih_toko(df)
