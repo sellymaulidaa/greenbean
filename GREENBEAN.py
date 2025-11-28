@@ -170,13 +170,16 @@ def simpan_riwayatPenjualan(pesanan_list, total_bayar, nama_pembeli, nama_toko, 
             "Berat": float(item["berat"]),
             "Harga Total": float(item["harga_total"]),
             "Total Bayar": float(total_bayar),
-            "Pembayaran" : metode_pembayaran
+            "Pembayaran" : metode_pembayaran,
+            "Status": "Belum Dikirim"
         })
     try:
         df = pd.read_csv("riwayatpenjualan.csv")
     except (FileNotFoundError, pd.errors.EmptyDataError):
-        df = pd.DataFrame(columns=["Waktu","Pembeli","Toko","Produk","Jenis","Berat","Harga Total","Total Bayar", "Metode Pembayaran"])
+        df = pd.DataFrame(columns=["Waktu","Pembeli","Toko","Produk","Jenis","Berat","Harga Total","Total Bayar", "Metode Pembayaran", "Status"])
     df = pd.concat([df,pd.DataFrame(riwayat_baru)], ignore_index=True)
+    if "Status" not in df.columns:
+        df["Status"] = "Belum Dikirim"
     df.to_csv("riwayatpenjualan.csv", index=False, encoding="utf-8-sig")
     print("Riwayat penjualan berhasil disimpan!")
 
@@ -187,6 +190,9 @@ def lihatRiwayat_Penjualan(username):
         if df.empty:
             print("Belum ada riwayat transaksi.")
             return
+        
+        if "Status" not in df.columns:
+            df["Status"] = "Belum Dikirim"
 
         data_toko = df[df["Toko"] == username]
 
@@ -196,12 +202,12 @@ def lihatRiwayat_Penjualan(username):
 
         data_list = []
         for _, row in data_toko.iterrows():
-            data_list.append([row["Pembeli"],row["Produk"],row["Jenis"],row["Berat"],f"Rp{row['Harga Total']:,}",f"Rp{row['Total Bayar']:,}",row["Waktu"], row["Pembayaran"] ])
+            data_list.append([row["Pembeli"],row["Produk"],row["Jenis"],row["Berat"],f"Rp{row['Harga Total']:,}",f"Rp{row['Total Bayar']:,}",row["Waktu"], row["Pembayaran"], row["Status Penjualan"] ])
 
         print("\n=== RIWAYAT PENJUALAN TOKO ANDA ===")
         print(tabulate(
             data_list,
-            headers=["Pembeli", "Produk", "Jenis","Berat", "Harga Total", "Total Bayar", "Waktu", "Pembayaran"],tablefmt="fancy_grid"))
+            headers=["Pembeli", "Produk", "Jenis","Berat", "Harga Total", "Total Bayar", "Waktu", "Pembayaran", "Status"],tablefmt="fancy_grid"))
 
     except FileNotFoundError:
         print("Belum ada riwayat transaksi (file tidak ditemukan).")
@@ -213,7 +219,7 @@ def buat_permintaan(username, nama_toko):
     try:
         df = pd.read_csv(file_path)
     except:
-        df = pd.DataFrame(columns=["Pembeli", "Produk", "Jumlah (kg)", "Keterangan", "Tanggal Permintaan", "Toko"])
+        df = pd.DataFrame(columns=["Pembeli", "Produk", "Jumlah (kg)", "Tanggal Permintaan", "Toko", "Status"])
 
     produk = input("Nama produk yang ingin diminta: ")
 
@@ -224,16 +230,15 @@ def buat_permintaan(username, nama_toko):
         except ValueError:
             print("Jumlah harus angka!")
 
-    keterangan = input("Keterangan (opsional): ")
     tanggal = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 
     permintaan_baru = {
         "Pembeli": username,
         "Produk": produk,
         "Jumlah (kg)": jumlah,
-        "Keterangan": keterangan if keterangan != "" else "Tidak ada",
         "Tanggal Permintaan": tanggal,
-        "Toko": nama_toko   
+        "Toko": nama_toko ,
+        "Status": "Menunggu Konfirmasi"
     }
 
     df = pd.concat([df, pd.DataFrame([permintaan_baru])], ignore_index=True)
@@ -260,13 +265,13 @@ def lihatPermintaan_Pembeli(username_penjual):
             return
 
         data_list = [
-            [row["Pembeli"], row["Produk"], row["Jumlah (kg)"], row["Keterangan"], row["Tanggal Permintaan"]]
+            [row["Pembeli"], row["Produk"], row["Jumlah (kg)"], row["Tanggal Permintaan"], row["Status Permintaan"]]
             for _, row in df_toko.iterrows()
         ]
 
         print(tabulate(
             data_list,
-            headers=["Pembeli", "Produk", "Jumlah (kg)", "Keterangan", "Tanggal"],
+            headers=["Pembeli", "Produk", "Jumlah (kg)", "Keterangan", "Tanggal", "Status"],
             tablefmt="fancy_grid"
         ))
 
@@ -274,6 +279,197 @@ def lihatPermintaan_Pembeli(username_penjual):
         print("Belum ada permintaan.")
     except pd.errors.EmptyDataError:
         print("Belum ada permintaan.")
+
+def updateStatus(username):
+    print("\n=== UPDATE STATUS ===")
+    print("1. Update Status Penjualan")
+    print("2. Update Status Permintaan Pembeli")
+    
+    pilih = input("Pilih menu (1/2): ")
+
+    if pilih == "1":
+        try:
+            df = pd.read_csv("RiwayatPenjualan.csv")
+        except FileNotFoundError:
+            print("Belum ada data penjualan.")
+            return
+        
+        data = df[df["Toko"] == username]
+
+        if data.empty:
+            print("Tidak ada transaksi penjualan untuk toko Anda.")
+            return
+
+        data_reset = data.reset_index()
+
+        table = [
+            [i, row["Waktu"], row["Pembeli"], row["Produk"], row["Berat"], row["Total Bayar"], row["Status"]]
+            for i, row in data_reset.iterrows()
+        ]
+
+        print(tabulate(table,
+                    headers=["No","Tanggal","Pembeli","Produk","Berat","Total","Status"],
+                    tablefmt="fancy_grid"))
+
+        try:
+            pilih_idx = int(input("\nMasukkan nomor transaksi yang ingin diperbarui: "))
+        except:
+            print("Input harus angka!")
+            return
+
+        if pilih_idx < 0 or pilih_idx >= len(data_reset):
+            print("Nomor tidak valid!")
+            return
+
+        index_asli = data_reset.loc[pilih_idx, "index"]
+
+        print("\nPilih status baru:")
+        print("1. Belum Dikirim")
+        print("2. Dikirim")
+        print("3. Selesai")
+
+        status_opsi = input("Pilih (1-3): ")
+
+        status = {
+            "1": "Belum Dikirim",
+            "2": "Dikirim",
+            "3": "Selesai"
+        }
+
+        if status_opsi not in status:
+            print("Pilihan tidak valid!")
+            return
+
+        df.loc[index_asli, "Status Penjualan"] = status[status_opsi]
+        df.to_csv("RiwayatPenjualan.csv", index=False)
+
+        print("\nStatus penjualan berhasil diperbarui!")
+        return
+
+    elif pilih == "2":
+        try:
+            df = pd.read_csv("PermintaanPembeli.csv")
+        except FileNotFoundError:
+            print("Belum ada permintaan pembeli.")
+            return
+
+        data = df[df["Toko"] == username]
+
+        if data.empty:
+            print("Tidak ada permintaan untuk toko Anda.")
+            return
+
+        data_reset = data.reset_index()
+
+        table = [
+            [ row["Pembeli"], row["Produk"], row["Jumlah (kg)"], row["Tanggal Permintaan"], row["Status"]]
+            for i, row in data_reset.iterrows()
+        ]
+
+        print(tabulate(table,
+                    headers=["No","Pembeli","Produk","Jumlah","Tanggal","Status"],
+                    tablefmt="fancy_grid"))
+
+        try:
+            pilih_idx = int(input("\nMasukkan nomor permintaan yang ingin diperbarui: "))
+        except:
+            print("Input harus angka!")
+            return
+
+        if pilih_idx < 0 or pilih_idx >= len(data_reset):
+            print("Nomor tidak valid!")
+            return
+
+        index_asli = data_reset.loc[pilih_idx, "index"]
+
+        print("\nPilih status permintaan:")
+        print("1. Diterima")
+        print("2. Ditolak")
+
+        status_opsi = input("Pilih (1/2): ")
+
+        status = {
+            "1": "Diterima",
+            "2": "Ditolak"
+        }
+
+        if status_opsi not in status:
+            print("Pilihan tidak valid!")
+            return
+
+        df.loc[index_asli, "Status Permintaan"] = status[status_opsi]
+        df.to_csv("PermintaanPembeli.csv", index=False)
+
+        print("\nStatus permintaan berhasil diperbarui!")
+        return
+
+    else:
+        print("Menu tidak valid!")
+
+def lihatStatus_Pembeli(username):
+    print("\n=== LIHAT STATUS PENJUALAN & PERMINTAAN ===")
+    print("1. Lihat Status Penjualan")
+    print("2. Lihat Status Permintaan Produk")
+    pilih = input("Pilih menu (1/2): ")
+
+    if pilih == "1":
+        try:
+            df = pd.read_csv("riwayatpenjualan.csv")
+        except FileNotFoundError:
+            print("Belum ada data penjualan.")
+            return
+
+        data = df[df["Pembeli"] == username]
+
+        if data.empty:
+            print("Tidak ada transaksi penjualan.")
+            return
+
+        data_list = []
+        for _, row in data.iterrows():
+            data_list.append([row["Toko"],row["Produk"],row["Jenis"],row["Berat"],f"Rp{row['Total Bayar']:,}",row["Waktu"], row["Status Penjualan"]])
+
+        print("\n=== STATUS PENJUALAN ANDA ===")
+        print(tabulate(data_list, 
+                       headers=["Toko", "Produk", "Jenis", "Berat", "Total Bayar", "Waktu",  "Status"],
+                       tablefmt="fancy_grid"))
+        return
+
+    elif pilih == "2":
+        try:
+            df = pd.read_csv("permintaanPembeli.csv")
+        except FileNotFoundError:
+            print("Belum ada data permintaan.")
+            return
+
+        data = df[df["Pembeli"] == username]
+
+        if data.empty:
+            print("Tidak ada permintaan produk.")
+            return
+
+        data_list = []
+        for _, row in data.iterrows():
+            data_list.append([
+                row["Toko"],
+                row["Produk"],
+                row["Jumlah (kg)"],
+                row["Tanggal Permintaan"],
+                row["Status Permintaan"]
+            ])
+
+        print("\n=== STATUS PERMINTAAN PRODUK ===")
+        print(tabulate(data_list,
+                       headers=["Toko", "Produk", "Jumlah (kg)", "Tanggal", "Status"],
+                       tablefmt="fancy_grid"))
+        return
+
+    else:
+        print("Pilihan tidak valid!")
+
+
+
+
 
 
 def tampilan_toko (toko_df):
@@ -323,7 +519,6 @@ def lihat_produk_toko(df, toko_terpilih):
                    showindex=False))
     
     return toko_produk
-
 
 
 def beliproduk(produk_df, username, toko_terpilih):
@@ -555,7 +750,7 @@ def menu_utama():
             username, role = login()
 
         elif pilih == "3":
-            print("Terimakaih atas kunjungan anda ^^")
+            print("Terimakasih atas kunjungan anda ^^")
             break
         else:
             print("Masukkan pilihan nomor yang tersedia")
@@ -610,7 +805,8 @@ def menu_penjual(username):
         print("4. Ubah Data Produk")
         print("5. Lihat Riwayat Penjualan")
         print("6. Lihat Permintaan Pembeli")
-        print("7. Keluar")
+        print("7. Update Status")
+        print("8. Keluar")
         pilih = input("Masukkan pilihan: ")
         if pilih == "1":
             tambahProduk(username)
@@ -625,6 +821,9 @@ def menu_penjual(username):
         elif pilih == "6":
             lihatPermintaan_Pembeli(username)
         elif pilih == "7":
+            updateStatus(username)
+            input("\nTekan ENTER untuk kembali ke menu pembeli...")
+        elif pilih == "8":
             print("Keluar dari menu penjual...")
             break
         else:
@@ -638,7 +837,8 @@ def menu_pembeli(username):
         print("\n=== MENU PEMBELI ===")
         print("1. Lihat Produk")
         print("2. Beli Produk")
-        print("3. Selesai")        
+        print("3. Lihat Status Penjualan & Permintaan")
+        print("4. Selesai")        
         pilihan = input("Pilih opsi (1-3): ")
         df = pd.read_csv("dataEdamame.csv")
         if pilihan == "1":
@@ -647,12 +847,10 @@ def menu_pembeli(username):
             toko_produk = lihat_produk_toko(df, toko_terpilih) 
             if not toko_produk.empty:
                 input("\nTekan ENTER untuk kembali ke menu pembeli...")
-            
         elif pilihan == "2":
             toko_terpilih = pilih_toko(df)
             os.system('cls')
             total_harga, total_berat, daftar_pesanan = beliproduk(df, username, toko_terpilih)
-
             if daftar_pesanan:
                 os.system('cls')
                 if total_berat > 0:
@@ -660,20 +858,19 @@ def menu_pembeli(username):
                     total_akhir = total_harga + ongkir_data[0]
                     pembayaran = metode_pembayaran()
                     simpan_riwayatPenjualan(daftar_pesanan,total_harga,username,daftar_pesanan[0]["toko"],pembayaran)
-
                     os.system('cls')
-                    
                     tampilkan_struk(daftar_pesanan,ongkir_data[0],total_akhir,ongkir_data,total_berat,pembayaran)
-
             input("\nTekan Enter untuk kembali...")
 
-
         elif pilihan == "3":
-                minta_ulasan()
-                break   
+            lihatStatus_Pembeli(username)
+            input("\nTekan ENTER untuk kembali ke menu pembeli...")
+            
+        elif pilihan == "4":
+            minta_ulasan()
+            break   
         else:
                 print("Masukkan angka 1, 2, atau 3!")
                 input("\nTekan ENTER untuk kembali...")
 
 menu_utama()
-
