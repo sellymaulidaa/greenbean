@@ -1,2 +1,2 @@
-Pembeli,Produk,Jumlah (kg),Keterangan,Tanggal Permintaan,Toko
-Kanny,Edamame Tsurumidori,2.0,-,27-11-2025 13:51:31,TaniMame
+Pembeli,Produk,Jumlah (kg),Tanggal Permintaan,Toko, ,Status,Status Permintaan
+Kanny,Edamame Ryokku,2.0,28-11-2025 16:31:05,Edamame Mart,,Menunggu Konfirmasi,Diterima
